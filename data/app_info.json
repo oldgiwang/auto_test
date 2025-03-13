@@ -1,0 +1,14 @@
+{
+    "current_app": {
+        "package": "com.android.settings",
+        "activity": ".MainSettings",
+        "pid": 22719
+    },
+    "window_info_error": "'Device' object has no attribute 'window_info'",
+    "ui_features": {
+        "设置页": true,
+        "WLAN设置": true,
+        "蓝牙设置": true
+    },
+    "keyboard_visible": false
+}
