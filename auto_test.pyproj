@@ -599,6 +599,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="main.py" />
+    <Compile Include="src\ai_interface\action_analyzer.py" />
     <Compile Include="src\ai_interface\ai_client.py" />
     <Compile Include="src\ai_interface\prompt_generator.py" />
     <Compile Include="src\test_runner\code_executor.py" />
@@ -607,6 +608,7 @@
     <Compile Include="src\ui_automator\element_parser.py" />
     <Compile Include="src\utils\data_loader.py" />
     <Compile Include="src\utils\element_dictionary.py" />
+    <Compile Include="src\utils\interaction_handler.py" />
     <Compile Include="src\__init__.py" />
     <Compile Include="venv\Lib\site-packages\pip\_internal\build_env.py" />
     <Compile Include="venv\Lib\site-packages\pip\_internal\cache.py" />

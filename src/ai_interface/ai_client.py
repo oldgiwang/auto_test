@@ -29,6 +29,85 @@ class AIClient:
             base_url=self.config["base_url"]
         )
     
+    def get_action_analysis(self, prompt: str) -> Dict[str, Any]:
+        """
+        分析测试步骤并返回高级动作
+        
+        参数:
+            prompt: 提示文本
+            
+        返回:
+            动作字典
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model=self.config["model"],
+                messages=[
+                    {"role": "system", "content": "You are a helpful android UI automation expert."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,  # 较低的温度使结果更确定
+                max_tokens=1024,
+                stream=False
+            )
+            
+            action_text = response.choices[0].message.content
+            try:
+                # 尝试解析JSON
+                action_dict = json.loads(action_text)
+                return action_dict
+            except json.JSONDecodeError:
+                # 如果解析失败，尝试提取JSON部分
+                if "{" in action_text and "}" in action_text:
+                    json_part = action_text[action_text.find("{"):action_text.rfind("}")+1]
+                    try:
+                        action_dict = json.loads(json_part)
+                        return action_dict
+                    except:
+                        pass
+                
+                print("无法解析AI返回的动作JSON，使用默认动作")
+                return {"action": "UNKNOWN", "target": "UNKNOWN"}
+                
+        except Exception as e:
+            print(f"获取动作分析时出错: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"action": "ERROR", "target": str(e)}
+    
+    def generate_operation_script(self, prompt: str) -> str:
+        """
+        生成具体操作脚本
+        
+        参数:
+            prompt: 提示文本
+            
+        返回:
+            Python脚本
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model=self.config["model"],
+                messages=[
+                    {"role": "system", "content": "You are a helpful android UI automation expert."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=self.config["temperature"],
+                max_tokens=self.config["max_tokens"],
+                stream=False
+            )
+            
+            # 提取生成的代码
+            code = response.choices[0].message.content
+            code = self._extract_code_from_response(code)
+            return code
+            
+        except Exception as e:
+            print(f"生成操作脚本时出错: {e}")
+            import traceback
+            traceback.print_exc()
+            return "def execute_test_step(d):\n    print('生成脚本出错')\n    return False"
+    
     def generate_test_code(self, 
                           test_cases: List[Dict[str, Any]], 
                           element_xml: str, 
@@ -75,6 +154,9 @@ class AIClient:
             
             请基于uiautomator2库生成一个完整的Python函数，实现上述测试用例的测试步骤。
             函数应该执行"{current_test['test_step']}"这个操作，比如点击相应的按钮、输入文本等。
+            代码应该模拟人类操作:
+            1. 找到目标元素在屏幕上的位置
+            2. 执行相应的交互动作
             
             你的代码必须：
             1. 使用上面的元素字典中的信息来找到正确的UI元素
@@ -85,10 +167,20 @@ class AIClient:
             示例格式:
             ```python
             def execute_test_step(d):
-                # 查找并点击"设置"按钮
-                d.xpath('//android.widget.TextView[@text="设置"]').click()
-                # 或使用其他适当的方法
-                return True  # 如果执行成功
+                # 查找WLAN元素
+                element = None
+                for path, elem_info in element_dict.items():
+                    if elem_info['text'] == 'WLAN':
+                        element = elem_info
+                        break
+                
+                if element:
+                    # 获取元素中心坐标
+                    x, y = element['coords']['center_x'], element['coords']['center_y']
+                    # 点击元素
+                    d.click(x, y)
+                    return True
+                return False
             ```
             
             只返回代码，不要有其他任何解释。

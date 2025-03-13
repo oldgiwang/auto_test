@@ -10,13 +10,15 @@ sys.path.append(os.path.abspath("src"))
 
 from src.ui_automator.element_parser import ElementParser
 from src.ui_automator.device_controller import DeviceController
+from src.ui_automator.interaction_handler import InteractionHandler
 from src.ai_interface.ai_client import AIClient
+from src.ai_interface.improved_action_analyzer import ImprovedActionAnalyzer
 from src.utils.data_loader import DataLoader
-from src.utils.element_dictionary import ElementDictionary
+from src.utils.improved_element_dictionary import ImprovedElementDictionary
 
 def main():
     """主程序入口"""
-    print("=== 安卓UI自动化测试系统 ===")
+    print("=== 安卓UI自动化测试系统 (改进版) ===")
     
     # 初始化设备控制器
     device_controller = DeviceController()
@@ -34,6 +36,9 @@ def main():
     # 初始化AI客户端
     ai_client = AIClient("config/api_config.json")
     
+    # 初始化动作分析器
+    action_analyzer = ImprovedActionAnalyzer(ai_client)
+    
     # 加载测试用例
     test_cases = DataLoader.load_test_cases("data/test_cases.xlsx")
     if not test_cases:
@@ -41,8 +46,8 @@ def main():
         return
     print(f"成功加载 {len(test_cases)} 个测试用例")
     
-    # 初始化元素字典
-    element_dict = ElementDictionary()
+    # 初始化增强版元素字典
+    element_dict = ImprovedElementDictionary()
     
     # 执行测试
     results = []
@@ -67,37 +72,50 @@ def main():
         element_xml = DataLoader.load_element_xml(xml_path)
         app_info = DataLoader.load_app_info(app_info_path)
         
-        # 加载元素字典
+        # 加载增强版元素字典
         element_dict.load_from_files(xml_path, app_info_path)
-        element_dict_data = element_dict.get_all_elements()
+        element_dict_data = element_dict.elements
         
-        # 生成测试代码
-        print("正在生成测试代码...")
-        code = ai_client.generate_test_code(
-            test_cases=test_cases,
-            element_xml=element_xml,
-            app_info=app_info,
-            element_dict=element_dict_data,
-            test_index=i
-        )
+        # 初始化交互处理器
+        interaction_handler = InteractionHandler(device, element_dict)
         
-        if not code:
-            print("生成测试代码失败")
+        # 步骤1: 分析测试用例，获取高级动作
+        print("正在分析测试步骤，提取高级动作...")
+        action_result = action_analyzer.analyze_task(test_case['test_step'])
+        actions = action_result.get('actions', [])
+        
+        if not actions:
+            print("未提取到有效动作")
+            test_case["test_result"] = "fail"
+            results.append(test_case)
+            continue
+            
+        print(f"提取的高级动作: {json.dumps(actions, ensure_ascii=False, indent=2)}")
+        
+        # 步骤2: 根据高级动作和元素字典生成具体操作脚本
+        print("正在生成操作脚本...")
+        operation_script = action_analyzer.generate_interaction_code(actions, element_dict_data, app_info)
+        
+        if not operation_script:
+            print("生成操作脚本失败")
             test_case["test_result"] = "fail"
             results.append(test_case)
             continue
         
         # 显示生成的代码
-        print(f"\n生成的测试代码:\n{'-'*50}\n{code}\n{'-'*50}")
+        print(f"\n生成的操作脚本:\n{'-'*50}\n{operation_script}\n{'-'*50}")
         
-        # 执行测试代码
-        print("正在执行测试代码...")
+        # 步骤3: 执行操作脚本
+        print("正在执行操作脚本...")
         try:
-            # 创建本地变量空间，包含设备对象
-            local_vars = {"d": device}
+            # 创建本地变量空间，包含设备对象和元素字典
+            local_vars = {
+                "d": device,
+                "element_dict": element_dict_data
+            }
             
             # 执行代码
-            exec(code, globals(), local_vars)
+            exec(operation_script, globals(), local_vars)
             
             # 调用生成的函数
             if "execute_test_step" in local_vars:
@@ -128,7 +146,7 @@ def main():
             element_xml = DataLoader.load_element_xml(xml_path)
             app_info = DataLoader.load_app_info(app_info_path)
             
-            # 验证测试结果
+            # 步骤4: 验证测试结果
             print("正在验证测试结果...")
             result_passed = ai_client.validate_test_result(
                 test_case=test_case,
