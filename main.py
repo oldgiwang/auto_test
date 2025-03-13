@@ -12,9 +12,9 @@ from src.ui_automator.element_parser import ElementParser
 from src.ui_automator.device_controller import DeviceController
 from src.ui_automator.interaction_handler import InteractionHandler
 from src.ai_interface.ai_client import AIClient
-from src.ai_interface.improved_action_analyzer import ImprovedActionAnalyzer
+from src.ai_interface.action_analyzer import ImprovedActionAnalyzer
 from src.utils.data_loader import DataLoader
-from src.utils.improved_element_dictionary import ImprovedElementDictionary
+from src.utils.element_dictionary import ImprovedElementDictionary
 
 def main():
     """主程序入口"""

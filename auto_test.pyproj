@@ -4,8 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>9d21fbce-740c-4eb4-ab9f-0a62910e5f77</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>
-    </StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -608,7 +607,7 @@
     <Compile Include="src\ui_automator\element_parser.py" />
     <Compile Include="src\utils\data_loader.py" />
     <Compile Include="src\utils\element_dictionary.py" />
-    <Compile Include="src\utils\interaction_handler.py" />
+    <Compile Include="src\ui_automator\interaction_handler.py" />
     <Compile Include="src\__init__.py" />
     <Compile Include="venv\Lib\site-packages\pip\_internal\build_env.py" />
     <Compile Include="venv\Lib\site-packages\pip\_internal\cache.py" />

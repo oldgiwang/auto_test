@@ -11,15 +11,17 @@ class ElementParser:
         """初始化元素解析器"""
         self.device = device or u2.connect()  # 如果没有提供设备，自动连接
     
+    # 修改 src/ui_automator/element_parser.py 中的 extract_elements 方法
+
     def extract_elements(self, xml_output_path, app_info_output_path, screenshot_path=None):
         """
         提取UI元素信息和应用信息
-        
+    
         参数:
             xml_output_path: 输出元素XML的路径
             app_info_output_path: 输出应用信息JSON的路径
             screenshot_path: 可选的截图保存路径
-        
+    
         返回:
             成功提取元素和信息返回True，否则返回False
         """
@@ -27,55 +29,60 @@ class ElementParser:
             # 确保输出目录存在
             os.makedirs(os.path.dirname(xml_output_path), exist_ok=True)
             os.makedirs(os.path.dirname(app_info_output_path), exist_ok=True)
-            
+        
             # 等待UI稳定
             time.sleep(1)
-            
+        
             # 收集系统上下文信息
             print("获取系统层级信息...")
             system_context = self._collect_system_context()
-            
+        
             # 保存系统上下文信息
             with open(app_info_output_path, "w", encoding="utf-8") as f:
                 json.dump(system_context, f, ensure_ascii=False, indent=4)
-            
+        
             # 截取整个屏幕(如果需要)
             if screenshot_path:
                 screen = self.device.screenshot(format='pillow')
                 screen.save(screenshot_path)
-            
+        
             # 获取所有UI元素
             xml = self.device.dump_hierarchy()
-            
-            # 将XML保存到文件
+        
+            # 将XML保存到文件，确保XML声明在开头，没有前导空白
             with open(xml_output_path, "w", encoding="utf-8") as f:
-                # 确保XML声明在文件开头
+                # 先写入XML声明
                 f.write('<?xml version="1.0" encoding="utf-8"?>\n')
-                
+            
                 # 添加系统层级信息作为XML注释
                 current_app = system_context.get('current_app', {})
                 current_package = current_app.get('package', 'Unknown')
                 current_activity = current_app.get('activity', 'Unknown')
                 location_desc = self._analyze_system_location(system_context)
-                
+            
                 f.write(f"<!-- 系统层级信息\n")
                 f.write(f"包名 (Package): {current_package}\n")
                 f.write(f"活动 (Activity): {current_activity}\n")
                 f.write(f"系统位置: {location_desc}\n")
                 f.write(f"界面特征: {', '.join(k for k, v in system_context.get('ui_features', {}).items() if v)}\n")
                 f.write(f"-->\n\n")
-                
-                # 添加原始XML内容
+            
+                # 添加原始XML内容，但去掉原始XML中的XML声明，避免重复
+                if "<?xml" in xml:
+                    # 移除原始XML中的XML声明
+                    xml_start = xml.find("?>") + 2
+                    xml = xml[xml_start:].strip()
+            
                 f.write(xml)
-            
+        
             return True
-            
+        
         except Exception as e:
             print(f"提取元素时出错: {e}")
             import traceback
             traceback.print_exc()
             return False
-    
+
     def _collect_system_context(self):
         """收集当前系统上下文信息，包括应用信息、窗口状态和UI特征"""
         context_info = {}
