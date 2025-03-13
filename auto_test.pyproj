@@ -598,6 +598,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="main.py" />
+    <Compile Include="pandatest.py" />
     <Compile Include="src\ai_interface\action_analyzer.py" />
     <Compile Include="src\ai_interface\ai_client.py" />
     <Compile Include="src\ai_interface\prompt_generator.py" />

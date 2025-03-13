@@ -1,8 +1,8 @@
 {
     "current_app": {
-        "package": "com.android.settings",
-        "activity": ".MainSettings",
-        "pid": 23829
+        "package": "com.miui.home",
+        "activity": ".launcher.Launcher",
+        "pid": 2290
     },
     "window_info_error": "'Device' object has no attribute 'window_info'",
     "ui_features": {
