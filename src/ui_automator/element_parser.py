@@ -13,75 +13,118 @@ class ElementParser:
     
     # 修改 src/ui_automator/element_parser.py 中的 extract_elements 方法
 
-    def extract_elements(self, xml_output_path, app_info_output_path, screenshot_path=None):
+    def extract_simplified_elements(self, xml_path, json_output_path=None):
         """
-        提取UI元素信息和应用信息
+        提取简化的元素信息，更适合AI理解
     
         参数:
-            xml_output_path: 输出元素XML的路径
-            app_info_output_path: 输出应用信息JSON的路径
-            screenshot_path: 可选的截图保存路径
-    
+            xml_path: XML文件路径
+            json_output_path: 可选的JSON输出路径
+        
         返回:
-            成功提取元素和信息返回True，否则返回False
+            简化的元素列表，也可选择写入JSON文件
         """
+        # 先提取完整元素
+        self.extract_elements(xml_path, "data/app_info.json")
+    
+        # 读取XML
         try:
-            # 确保输出目录存在
-            os.makedirs(os.path.dirname(xml_output_path), exist_ok=True)
-            os.makedirs(os.path.dirname(app_info_output_path), exist_ok=True)
-        
-            # 等待UI稳定
-            time.sleep(1)
-        
-            # 收集系统上下文信息
-            print("获取系统层级信息...")
-            system_context = self._collect_system_context()
-        
-            # 保存系统上下文信息
-            with open(app_info_output_path, "w", encoding="utf-8") as f:
-                json.dump(system_context, f, ensure_ascii=False, indent=4)
-        
-            # 截取整个屏幕(如果需要)
-            if screenshot_path:
-                screen = self.device.screenshot(format='pillow')
-                screen.save(screenshot_path)
-        
-            # 获取所有UI元素
-            xml = self.device.dump_hierarchy()
-        
-            # 将XML保存到文件，确保XML声明在开头，没有前导空白
-            with open(xml_output_path, "w", encoding="utf-8") as f:
-                # 先写入XML声明
-                f.write('<?xml version="1.0" encoding="utf-8"?>\n')
+            with open(xml_path, 'r', encoding='utf-8') as f:
+                xml_content = f.read()
             
-                # 添加系统层级信息作为XML注释
-                current_app = system_context.get('current_app', {})
-                current_package = current_app.get('package', 'Unknown')
-                current_activity = current_app.get('activity', 'Unknown')
-                location_desc = self._analyze_system_location(system_context)
-            
-                f.write(f"<!-- 系统层级信息\n")
-                f.write(f"包名 (Package): {current_package}\n")
-                f.write(f"活动 (Activity): {current_activity}\n")
-                f.write(f"系统位置: {location_desc}\n")
-                f.write(f"界面特征: {', '.join(k for k, v in system_context.get('ui_features', {}).items() if v)}\n")
-                f.write(f"-->\n\n")
-            
-                # 添加原始XML内容，但去掉原始XML中的XML声明，避免重复
-                if "<?xml" in xml:
-                    # 移除原始XML中的XML声明
-                    xml_start = xml.find("?>") + 2
-                    xml = xml[xml_start:].strip()
-            
-                f.write(xml)
+            # 解析XML
+            import xml.etree.ElementTree as ET
+            import io
         
-            return True
+            # 找到实际的XML开始位置
+            if "<?xml" in xml_content:
+                xml_start = xml_content.find("<?xml")
+                xml_content = xml_content[xml_start:]
         
+            tree = ET.parse(io.StringIO(xml_content))
+            root = tree.getroot()
+        
+            # 简化元素列表
+            simplified_elements = []
+        
+            # 递归收集所有可交互元素
+            def collect_interactive_elements(node, path=""):
+                # 获取元素属性
+                attrs = node.attrib
+            
+                # 判断元素是否可交互
+                is_clickable = attrs.get('clickable') == 'true'
+                is_editable = attrs.get('editable') == 'true'
+                is_checkable = attrs.get('checkable') == 'true'
+                is_scrollable = attrs.get('scrollable') == 'true'
+            
+                if is_clickable or is_editable or is_checkable or is_scrollable:
+                    # 获取元素文本、描述等
+                    text = attrs.get('text', '')
+                    resource_id = attrs.get('resource-id', '')
+                    content_desc = attrs.get('content-desc', '')
+                    class_name = attrs.get('class', '')
+                    bounds_str = attrs.get('bounds', '')
+                
+                    # 解析bounds
+                    bounds = []
+                    if bounds_str:
+                        try:
+                            # 通常格式为"[x1,y1][x2,y2]"
+                            bounds_str = bounds_str.replace('][', ',').strip('[]').split(',')
+                            bounds = [int(b) for b in bounds_str]
+                            center_x = (bounds[0] + bounds[2]) // 2
+                            center_y = (bounds[1] + bounds[3]) // 2
+                        except:
+                            bounds = []
+                
+                    # 创建简化元素
+                    element = {
+                        "id": resource_id,
+                        "text": text,
+                        "desc": content_desc,
+                        "class": class_name,
+                        "path": path + "/" + (text or content_desc or resource_id or class_name),
+                        "clickable": is_clickable,
+                        "editable": is_editable,
+                        "checkable": is_checkable,
+                        "scrollable": is_scrollable
+                    }
+                
+                    # 添加坐标（如果有）
+                    if bounds:
+                        element["coords"] = {
+                            "center_x": center_x,
+                            "center_y": center_y,
+                            "left": bounds[0],
+                            "top": bounds[1],
+                            "right": bounds[2],
+                            "bottom": bounds[3]
+                        }
+                
+                    simplified_elements.append(element)
+            
+                # 递归处理子元素
+                for i, child in enumerate(node):
+                    new_path = path + "/" + (text or content_desc or resource_id or class_name)
+                    collect_interactive_elements(child, new_path)
+        
+            # 开始收集
+            collect_interactive_elements(root)
+        
+            # 输出JSON（如果需要）
+            if json_output_path:
+                import json
+                with open(json_output_path, 'w', encoding='utf-8') as f:
+                    json.dump(simplified_elements, f, ensure_ascii=False, indent=2)
+            
+            return simplified_elements
+            
         except Exception as e:
-            print(f"提取元素时出错: {e}")
+            print(f"提取简化元素时出错: {e}")
             import traceback
             traceback.print_exc()
-            return False
+            return []    
 
     def _collect_system_context(self):
         """收集当前系统上下文信息，包括应用信息、窗口状态和UI特征"""
