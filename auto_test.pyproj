@@ -24,7 +24,6 @@
   <ItemGroup>
     <Folder Include="config\" />
     <Folder Include="data\" />
-    <Folder Include="results\" />
     <Folder Include="src\" />
     <Folder Include="src\ai_interface\" />
     <Folder Include="src\utils\" />
@@ -139,11 +138,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="config\api_config.json" />
-    <Content Include="config\config.json" />
     <Content Include="data\app_info.json" />
     <Content Include="data\element.xml" />
     <Content Include="data\test_cases.xlsx" />
-    <Content Include="results\logs.txt" />
     <Content Include="venv\.gitignore" />
     <Content Include="venv\Lib\site-packages\pip-24.3.1.dist-info\AUTHORS.txt" />
     <Content Include="venv\Lib\site-packages\pip-24.3.1.dist-info\entry_points.txt" />
@@ -598,16 +595,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="main.py" />
-    <Compile Include="pandatest.py" />
-    <Compile Include="src\ai_interface\action_analyzer.py" />
     <Compile Include="src\ai_interface\ai_client.py" />
-    <Compile Include="src\ai_interface\prompt_generator.py" />
     <Compile Include="src\test_runner\code_executor.py" />
     <Compile Include="src\test_runner\result_validator.py" />
     <Compile Include="src\ui_automator\device_controller.py" />
     <Compile Include="src\ui_automator\element_parser.py" />
     <Compile Include="src\utils\data_loader.py" />
-    <Compile Include="src\utils\element_dictionary.py" />
     <Compile Include="src\ui_automator\interaction_handler.py" />
     <Compile Include="src\__init__.py" />
     <Compile Include="venv\Lib\site-packages\pip\_internal\build_env.py" />
